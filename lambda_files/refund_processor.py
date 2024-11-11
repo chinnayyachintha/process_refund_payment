@@ -3,6 +3,7 @@ import os
 import boto3
 import logging
 import time
+import requests  # Use requests for making HTTP calls to Payroc
 from botocore.exceptions import ClientError
 
 # Set up logging
@@ -11,7 +12,10 @@ logger.setLevel(logging.INFO)
 
 # Initialize clients
 dynamodb = boto3.resource('dynamodb')
-payment_processor_client = boto3.client('your-payment-processor')  # Replace with actual payment processor client
+# Initialize the Payroc API client (replace with the actual Payroc API URL and credentials)
+PAYROC_API_URL = os.environ['PAYROC_API_URL']  # Example: 'https://api.payroc.com'
+PAYROC_API_KEY = os.environ['PAYROC_API_KEY']  # Example: Payroc API Key
+
 refund_table = dynamodb.Table(os.environ['REFUND_TABLE'])
 audit_table = dynamodb.Table(os.environ['AUDIT_TABLE'])
 
@@ -22,7 +26,7 @@ def lambda_handler(event, context):
         refund_amount = event['refund_amount']
         currency = event['currency']
 
-        # Call payment processor to process the refund
+        # Call Payroc to process the refund
         refund_response = initiate_refund(transaction_id, refund_amount, currency)
         
         if refund_response['status'] == 'SUCCESS':
@@ -55,18 +59,30 @@ def lambda_handler(event, context):
         }
 
 def initiate_refund(transaction_id, amount, currency):
-    # Replace with actual payment processor API call for refund
+    # Call Payroc API for refund processing
     try:
-        # Example placeholder for a refund API call
-        response = payment_processor_client.refund(
-            TransactionId=transaction_id,
-            Amount=amount,
-            CurrencyCode=currency
-        )
-        return {'status': 'SUCCESS', 'response': response}
-    except ClientError as e:
-        logger.error("Payment processor error: %s", e.response['Error']['Message'])
-        return {'status': 'FAILED', 'message': e.response['Error']['Message']}
+        refund_url = f"{PAYROC_API_URL}/refund"  # Adjust according to Payroc's actual refund endpoint
+        headers = {
+            'Authorization': f'Bearer {PAYROC_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            'transaction_id': transaction_id,
+            'amount': amount,
+            'currency': currency
+        }
+
+        # Make the HTTP request to Payroc to process the refund
+        response = requests.post(refund_url, json=data, headers=headers)
+        
+        if response.status_code == 200:
+            return {'status': 'SUCCESS', 'response': response.json()}
+        else:
+            logger.error("Payroc refund error: %s", response.text)
+            return {'status': 'FAILED', 'message': response.text}
+    except requests.exceptions.RequestException as e:
+        logger.error("Error calling Payroc API: %s", str(e))
+        return {'status': 'FAILED', 'message': str(e)}
 
 def log_refund_in_dynamodb(transaction_id, amount, currency, refund_response):
     try:

@@ -1,6 +1,4 @@
 # Create the Lambda Function for Processing Refunds
-# Create a Lambda function that processes refund requests and updates the Refunds table in DynamoDB.
-
 resource "aws_lambda_function" "refund_processor" {
   function_name = "${var.project_name}-RefundProcessor"
   handler       = "refund_processor.lambda_handler"
@@ -12,8 +10,8 @@ resource "aws_lambda_function" "refund_processor" {
     variables = {
       REFUND_TABLE     = aws_dynamodb_table.refunds.name
       AUDIT_TABLE      = aws_dynamodb_table.payment_audit_trail.name
-      ELAVON_API_URL   = var.payroc_api_url  # Elavon API URL for refund
-      ELAVON_API_TOKEN = var.payroc_api_token # Elavon API Token for authentication
+      PAYROC_API_URL   = var.payroc_api_url  # Elavon API URL for refund
+      SECRET_NAME      = aws_secretsmanager_secret.payroc_api_token.name # Secret name for Payroc API token
     }
   }
 }
@@ -23,7 +21,6 @@ resource "aws_cloudwatch_log_group" "refund_processor_logs" {
   name              = "/aws/lambda/${aws_lambda_function.refund_processor.function_name}"
   retention_in_days = 30 # Set retention period for logs (e.g., 30 days)
 }
-
 
 # IAM Role for Lambda execution with necessary permissions
 resource "aws_iam_role" "lambda_execution_role" {
@@ -44,9 +41,9 @@ resource "aws_iam_role" "lambda_execution_role" {
   tags = var.tags
 }
 
-# Attach a policy to allow access to DynamoDB
+# Attach a policy to allow access to DynamoDB and Secrets Manager
 resource "aws_iam_role_policy" "lambda_execution_policy" {
-  name = "dynamodb-access-policy"
+  name = "dynamodb-secrets-access-policy"
   role = aws_iam_role.lambda_execution_role.id
   policy = jsonencode({
     Version = "2012-10-17"
@@ -63,6 +60,14 @@ resource "aws_iam_role_policy" "lambda_execution_policy" {
           aws_dynamodb_table.payment_audit_trail.arn
         ]
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = aws_secretsmanager_secret.payroc_api_token.arn
+      }
     ]
   })
 }
+
