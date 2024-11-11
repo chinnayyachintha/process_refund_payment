@@ -4,7 +4,7 @@
 
 # Create S3 Bucket for refund backups
 resource "aws_s3_bucket" "refund_backup_bucket" {
-  bucket = "${var.project_name}-refund-backup-bucket"
+  bucket = "${var.project_name}-backup-bucket"
 
   tags = merge(
     {
