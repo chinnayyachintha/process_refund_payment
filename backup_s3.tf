@@ -3,12 +3,12 @@
 # S3 bucket to store the backups and configure it with versioning and a lifecycle policy to manage data retention
 
 # Create S3 Bucket for refund backups
-resource "aws_s3_bucket" "refund_backups" {
-  bucket = "${var.project_name}-refund-backups"
+resource "aws_s3_bucket" "refund_backup_bucket" {
+  bucket = "${var.project_name}-refund_backup_bucket"
 
   tags = merge(
     {
-      Name = "${var.project_name}-RefundBackups"
+      Name = "${var.project_name}-refund_backup_bucket"
     },
     var.tags
   )

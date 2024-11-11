@@ -10,30 +10,32 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize clients
+# Initialize clients and environment variables
 dynamodb = boto3.resource('dynamodb')
-# Initialize the Payroc API client (replace with the actual Payroc API URL and credentials)
-PAYROC_API_URL = os.environ['PAYROC_API_URL']  # Example: 'https://api.payroc.com'
-PAYROC_API_KEY = os.environ['PAYROC_API_KEY']  # Example: Payroc API Key
+PAYROC_API_URL = os.getenv('PAYROC_API_URL')  # Example: 'https://api.payroc.com'
+PAYROC_API_KEY = os.getenv('PAYROC_API_KEY')  # Example: Payroc API Key
 
-refund_table = dynamodb.Table(os.environ['REFUND_TABLE'])
-audit_table = dynamodb.Table(os.environ['AUDIT_TABLE'])
+refund_table = dynamodb.Table(os.getenv('REFUND_TABLE'))
+audit_table = dynamodb.Table(os.getenv('AUDIT_TABLE'))
 
 def lambda_handler(event, context):
-    try:
-        # Extract refund details from event
-        transaction_id = event['transaction_id']
-        refund_amount = event['refund_amount']
-        currency = event['currency']
+    transaction_id = event.get('transaction_id')
+    refund_amount = event.get('refund_amount')
+    currency = event.get('currency')
+    
+    if not (transaction_id and refund_amount and currency):
+        logger.error("Missing required fields in the event payload.")
+        return {
+            'statusCode': 400,
+            'body': json.dumps('Error: Missing required refund details.')
+        }
 
+    try:
         # Call Payroc to process the refund
         refund_response = initiate_refund(transaction_id, refund_amount, currency)
         
         if refund_response['status'] == 'SUCCESS':
-            # Log the successful refund in the Refund DynamoDB table
             log_refund_in_dynamodb(transaction_id, refund_amount, currency, refund_response)
-            
-            # Log the refund operation in the Audit DynamoDB table
             log_audit_trail(transaction_id, refund_amount, currency, "SUCCESS", refund_response)
             
             logger.info("Refund processed successfully for transaction ID %s", transaction_id)
@@ -43,15 +45,13 @@ def lambda_handler(event, context):
             }
         else:
             logger.error("Refund failed: %s", refund_response['message'])
-            # Log the failed operation in the Audit DynamoDB table
             log_audit_trail(transaction_id, refund_amount, currency, "FAILED", refund_response)
             return {
                 'statusCode': 500,
-                'body': json.dumps('Refund failed')
+                'body': json.dumps(f"Refund failed: {refund_response['message']}")
             }
     except Exception as e:
-        logger.error("Error processing refund: %s", str(e))
-        # Log the error in the Audit DynamoDB table
+        logger.error("Unexpected error processing refund: %s", str(e))
         log_audit_trail(transaction_id, refund_amount, currency, "ERROR", str(e))
         return {
             'statusCode': 500,
@@ -59,9 +59,9 @@ def lambda_handler(event, context):
         }
 
 def initiate_refund(transaction_id, amount, currency):
-    # Call Payroc API for refund processing
+    """Call Payroc API for refund processing."""
     try:
-        refund_url = f"{PAYROC_API_URL}/refund"  # Adjust according to Payroc's actual refund endpoint
+        refund_url = f"{PAYROC_API_URL}/refund"
         headers = {
             'Authorization': f'Bearer {PAYROC_API_KEY}',
             'Content-Type': 'application/json'
@@ -78,13 +78,14 @@ def initiate_refund(transaction_id, amount, currency):
         if response.status_code == 200:
             return {'status': 'SUCCESS', 'response': response.json()}
         else:
-            logger.error("Payroc refund error: %s", response.text)
-            return {'status': 'FAILED', 'message': response.text}
+            logger.error("Payroc refund API error: %s", response.text)
+            return {'status': 'FAILED', 'message': response.json().get('message', 'Refund failed')}
     except requests.exceptions.RequestException as e:
-        logger.error("Error calling Payroc API: %s", str(e))
+        logger.error("Network error calling Payroc API: %s", str(e))
         return {'status': 'FAILED', 'message': str(e)}
 
 def log_refund_in_dynamodb(transaction_id, amount, currency, refund_response):
+    """Logs the refund transaction details in DynamoDB."""
     try:
         refund_table.put_item(
             Item={
@@ -93,12 +94,14 @@ def log_refund_in_dynamodb(transaction_id, amount, currency, refund_response):
                 'Currency': currency,
                 'RefundStatus': refund_response['status'],
                 'RefundDetails': refund_response['response'],
+                'Timestamp': int(time.time())  # Timestamp for record creation
             }
         )
     except ClientError as e:
         logger.error("Error logging refund to DynamoDB: %s", e.response['Error']['Message'])
 
 def log_audit_trail(transaction_id, amount, currency, status, details):
+    """Logs the audit trail of the refund process in DynamoDB."""
     try:
         audit_table.put_item(
             Item={
@@ -107,7 +110,7 @@ def log_audit_trail(transaction_id, amount, currency, status, details):
                 'Amount': amount,
                 'Currency': currency,
                 'Status': status,
-                'Details': str(details),
+                'Details': json.dumps(details),  # Ensures details are JSON serializable
                 'Timestamp': int(time.time())  # Timestamp for audit trail
             }
         )

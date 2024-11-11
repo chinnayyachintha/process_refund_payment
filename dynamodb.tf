@@ -2,8 +2,8 @@
 # create the Refunds and PaymentAuditTrail DynamoDB tables in Terraform.
 
 # DynamoDB table for storing refund records
-resource "aws_dynamodb_table" "refunds" {
-  name         = "${var.project_name}-Refunds"
+resource "aws_dynamodb_table" "refund_transactions" {
+  name         = "${var.project_name}-RefundTransactions"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "RefundID"
 
@@ -26,7 +26,7 @@ resource "aws_dynamodb_table" "refunds" {
 
   tags = merge(
     {
-      Name = "${var.project_name}-Refunds"
+      Name = "${var.project_name}-RefundTransactions"
     },
     var.tags
   )
