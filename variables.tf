@@ -23,7 +23,7 @@ variable "payroc_api_url" {
 }
 
 # Elavon API Token for authentication
-variable "payroc_aut_token" {
+variable "payroc_auth_token" {
   description = "The payroc API token for authentication"
   type        = string
 }
