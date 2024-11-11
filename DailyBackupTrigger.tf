@@ -4,8 +4,8 @@
 
 # CloudWatch Event to trigger backup Lambda function daily
 resource "aws_cloudwatch_event_rule" "daily_backup_schedule" {
-  name        = "DailyBackupSchedule"
-  description = "Daily trigger for refund data backup"
+  name                = "DailyBackupSchedule"
+  description         = "Daily trigger for refund data backup"
   schedule_expression = "rate(1 day)"
 }
 

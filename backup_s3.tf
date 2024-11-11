@@ -16,7 +16,7 @@ resource "aws_s3_bucket" "refund_backup_bucket" {
 
 # Enable versioning for the S3 bucket using aws_s3_bucket_versioning
 resource "aws_s3_bucket_versioning" "refund_backups_versioning" {
-  bucket = aws_s3_bucket.refund_backups.bucket
+  bucket = aws_s3_bucket.refund_backup_bucket.bucket  # Corrected to use refund_backup_bucket
 
   versioning_configuration {
     status = "Enabled"
@@ -25,18 +25,18 @@ resource "aws_s3_bucket_versioning" "refund_backups_versioning" {
 
 # Lifecycle Configuration for S3 Bucket to manage backup data retention
 resource "aws_s3_bucket_lifecycle_configuration" "refund_backup_lifecycle" {
-  bucket = aws_s3_bucket.refund_backups.bucket
+  bucket = aws_s3_bucket.refund_backup_bucket.bucket  # Corrected to use refund_backup_bucket
 
   rule {
     id     = "backup-lifecycle"
     status = "Enabled"
 
     expiration {
-      days = 365
+      days = 365  # Set the number of days for expiration
     }
 
     filter {
-      prefix = ""
+      prefix = ""  # Filter for all objects, can be adjusted as needed
     }
   }
 }
