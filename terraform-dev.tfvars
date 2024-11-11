@@ -14,4 +14,4 @@ tags = {
 payroc_api_url = "https://api.payroc.com/refund"
 
 # specify the Elavon API Token for authentication
-payroc_aut_token = "your_payroc_aut_token"
+payroc_auth_token = "your_payroc_aut_token"
