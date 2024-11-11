@@ -12,8 +12,8 @@ resource "aws_lambda_function" "refund_processor" {
     variables = {
       REFUND_TABLE     = aws_dynamodb_table.refunds.name
       AUDIT_TABLE      = aws_dynamodb_table.payment_audit_trail.name
-      ELAVON_API_URL   = var.elavon_api_url   # Elavon API URL for refund
-      ELAVON_API_TOKEN = var.elavon_api_token # Elavon API Token for authentication
+      ELAVON_API_URL   = var.payroc_api_url  # Elavon API URL for refund
+      ELAVON_API_TOKEN = var.payroc_api_token # Elavon API Token for authentication
     }
   }
 }

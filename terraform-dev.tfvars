@@ -11,7 +11,7 @@ tags = {
 }
 
 # specify the Elavon API URL and Token for refund processing
-elavon_api_url = "https://api.elavon.com/refund"
+payroc_api_url = "https://api.elavon.com/refund"
 
 # specify the Elavon API Token for authentication
-elavon_api_token = "your_elavon_api_token"
+payroc_api_token = "your_elavon_api_token"

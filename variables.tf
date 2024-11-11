@@ -17,13 +17,13 @@ variable "tags" {
 }
 
 # Elavon API URL and Token for refund processing
-variable "elavon_api_url" {
-  description = "The Elavon API endpoint URL"
+variable "payroc_api_url" {
+  description = "The payroc API endpoint URL"
   type        = string
 }
 
 # Elavon API Token for authentication
-variable "elavon_api_token" {
-  description = "The Elavon API token for authentication"
+variable "payroc_api_token" {
+  description = "The payroc API token for authentication"
   type        = string
 }
